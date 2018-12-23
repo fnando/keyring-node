@@ -55,7 +55,7 @@ suite("sequelize", () => {
 
   test("returns unitialized values", async () => {
     const User = await defineModel({
-      keys: {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="}
+      keys: {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="}
     });
 
     const user = new User();
@@ -66,7 +66,7 @@ suite("sequelize", () => {
 
   test("handles non-string values", async () => {
     const User = await defineModel({
-      keys: {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="}
+      keys: {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="}
     });
 
     const user = new User({email: null, secret: null});
@@ -79,7 +79,7 @@ suite("sequelize", () => {
 
   test("encrypts multiple attributes", async () => {
     const User = await defineModel({
-      keys: {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="}
+      keys: {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="}
     });
 
     const user = await User.create({email: "EMAIL", secret: "SECRET"});
@@ -94,7 +94,7 @@ suite("sequelize", () => {
 
   test("loads one record", async () => {
     const User = await defineModel({
-      keys: {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="}
+      keys: {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="}
     });
 
     await User.create({email: "EMAIL", secret: "SECRET"});
@@ -106,7 +106,7 @@ suite("sequelize", () => {
 
   test("loads several records", async () => {
     const User = await defineModel({
-      keys: {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="}
+      keys: {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="}
     });
 
     await User.create({email: "EMAIL1", secret: "SECRET1"});
@@ -122,7 +122,7 @@ suite("sequelize", () => {
 
   test("updates record", async () => {
     const User = await defineModel({
-      keys: {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="}
+      keys: {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="}
     });
 
     const user = await User.create({email: "EMAIL", secret: "SECRET"});
@@ -137,7 +137,7 @@ suite("sequelize", () => {
 
   test("saves keyring id", async () => {
     const User = await defineModel({
-      keys: {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="}
+      keys: {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="}
     });
 
     const user = await User.create({email: "EMAIL", secret: "SECRET"});
@@ -147,11 +147,11 @@ suite("sequelize", () => {
   });
 
   test("rotates key", async () => {
-    const keys = {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="};
+    const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
     const User = await defineModel({keys});
     const user = await User.create({email: "EMAIL", secret: "SECRET"});
 
-    keys[2] = "r6AfOeilPDJomFsiOXLdfQ==";
+    keys[2] = "VN8UXRVMNbIh9FWEFVde0q7GUA1SGOie1+FgAKlNYHc=";
 
     await user.save();
     await user.reload();
@@ -160,7 +160,7 @@ suite("sequelize", () => {
   });
 
   test("sets digest for existing columns", async () => {
-    const keys = {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="};
+    const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
     const User = await defineModel({keys});
     const user = await User.create({email: "EMAIL", secret: "SECRET"});
 
@@ -171,7 +171,7 @@ suite("sequelize", () => {
   });
 
   test("uses custom keyring id column", async () => {
-    const keys = {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="};
+    const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
     const keyringIdColumn = "custom_keyring_id";
     const User = await defineModel({keys, keyringIdColumn});
     const user = await User.create({email: "EMAIL", secret: "SECRET"});
@@ -183,7 +183,7 @@ suite("sequelize", () => {
   });
 
   test("encrypts attributes using custom encryption", async () => {
-    const keys = {"1": "XJyxRpsmIFvEuMuLofA86wktRj5KVwtpjvClu3dGc94="};
+    const keys = {"1": "XZXC+c7VUVGpyAceSUCOBbrp2fjJeeHwoaMQefgSCfp0/HABY5yJ7zRiLZbDlDZ7HytCRsvP4CxXt5hUqtx9Uw=="};
     const User = await defineModel({keys, encryption: "aes-256-cbc"});
     const user = await User.create({email: "EMAIL", secret: "SECRET"});
 

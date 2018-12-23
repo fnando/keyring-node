@@ -24,35 +24,39 @@ yarn add -E @fnando/keyring
 
 ### Encryption
 
-By default, AES-128-CBC is the algorithm used for encryption, which requires 16-bytes long keys. Using 16-bytes of random data base64-encoded is the recommended way. You can use the following command to generate keys:
+By default, AES-128-CBC is the algorithm used for encryption. This algorithm uses 16 bytes keys, but you're required to use a key that's double the size because half of that keys will be used to generate the HMAC. The first 16 bytes will be used as the encryption key, and the last 16 bytes will be used to generate the HMAC.
+
+Using random data base64-encoded is the recommended way. You can easily generate keys by using the following command:
 
 ```console
-$ dd if=/dev/urandom bs=16 count=1 2>/dev/null | openssl base64
-olod7u2bKOLWx1/tffppJQ==
+$ dd if=/dev/urandom bs=32 count=1 2>/dev/null | openssl base64 -A
+qUjOJFgZsZbTICsN0TMkKqUvSgObYxnkHDsazTqE5tM=
 ```
 
-Include the result of this command in the `value` section of the key description in the set of keys (aka keyring).
+Include the result of this command in the `value` section of the key description in the keyring. Half this key is used for encryption, and half for the HMAC.
 
 #### Key size
 
-- `aes-128-cbc`: 16 bytes.
-- `aes-192-cbc`: 24 bytes.
-- `aes-256-cbc`: 32 bytes.
+The key size depends on the algorithm being used. The key size should be double the size as half of it is used for HMAC computation.
+
+- `aes-128-cbc`: 16 bytes (encryption) + 16 bytes (HMAC).
+- `aes-192-cbc`: 24 bytes (encryption) + 24 bytes (HMAC).
+- `aes-256-cbc`: 32 bytes (encryption) + 32 bytes (HMAC).
 
 #### About the encrypted message
 
 Initialization vectors (IV) should be unpredictable and unique; ideally, they will be cryptographically random. They do not have to be secret: IVs are typically just added to ciphertext messages unencrypted. It may sound contradictory that something has to be unpredictable and unique, but does not have to be secret; it is important to remember that an attacker must not be able to predict ahead of time what a given IV will be.
 
-With that in mind, **keyring** uses `base64(unencrypted iv + encrypted message)` as the final message. If you're planning to migrate from other encryption mechanisms or read encrypted values from the database without using **keyring**, make sure you account for this. The IV length for AES is 16 bytes.
+With that in mind, _keyring_ uses `base64(hmac(unencrypted iv + encrypted message) + unencrypted iv + encrypted message)` as the final message. If you're planning to migrate from other encryption mechanisms or read encrypted values from the database without using _keyring_, make sure you account for this. The HMAC is 32-bytes long and the IV is 16-bytes long.
 
 ### Keyring
 
-Keys are managed through a keyring--a short JSON document describing your encryption keys. This set of keys is called _keyring_. The _keyring_ must be a JSON object mapping numeric ids of the keys to the key values. A keyring must have at least one key. For example:
+Keys are managed through a keyring--a short JSON document describing your encryption keys. The keyring must be a JSON object mapping numeric ids of the keys to the key values. A keyring must have at least one key. For example:
 
 ```json
 {
-  "1": "QSXyoiRDPoJmfkJUZ4hJeQ==",
-  "2": "r6AfOeilPDJomFsiOXLdfQ=="
+  "1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M=",
+  "2": "VN8UXRVMNbIh9FWEFVde0q7GUA1SGOie1+FgAKlNYHc="
 }
 ```
 
@@ -73,23 +77,36 @@ N.B.: Keys are hardcoded on these examples, but you shouldn't do it on your code
 ```js
 import { keyring } from "@fnando/keyring";
 
-const keys = {"1": "QSXyoiRDPoJmfkJUZ4hJeQ=="};
+const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
 const encryptor = keyring(keys);
 
-// STEP 1: Encrypt email using latest encryption key.
-const [encryptedEmail, keyringId, digest] = encryptor.encrypt("john@example.com");
+// STEP 1: Encrypt message using latest encryption key.
+const [encrypted, keyringId, digest] = encryptor.encrypt("super secret");
 
-console.log({encryptedEmail, keyringId, digest});
-/* {encryptedEmail: 'sI2a+DhiOuheWiIub8Rsmt0rMZ/qvMLZ5resTc503Vxhh4EmzQTKimnhNWamL1RG',
-    keyringId: 1,
-    digest: '5224cb6fdd5bbe463af1db8ee499e858fcb79f81'}
-*/
+console.log(`🔒 ${encrypted}`);
+console.log(`🔑 ${keyringId}`);
+console.log(`🔎 ${digest}`);
+//=> 🔒 Vco48O95YC4jqj44MheY8zFO2NLMPp/KILiUGbKxHvAwLd2/AN+zUG650CJzogttqnF1cGMFb//Idg4+bXoRMQ==
+//=> 🔑 1
+//=> 🔎 e24fe0dea7f9abe8cbb192702578715079689a3e
 
-// STEP 2: Decrypted email using encryption key defined by keyring id.
-const decryptedEmail = encryptor.decrypt(encryptedEmail, keyringId);
+// STEP 2: Decrypted message using encryption key defined by keyring id.
+const decrypted = encryptor.decrypt(encrypted, keyringId);
+console.log(`✉️ ${decrypted}`);
+//=> ✉️ super secret
+```
 
-console.log(decryptedEmail);
-//=> john@example.com
+#### Change encryption algorithm
+
+You can choose between `AES-128-CBC`, `AES-192-CBC` and `AES-256-CBC`. By default, `AES-128-CBC` will be used.
+
+To specify the encryption algorithm, set the `encryption` option. The following example uses `AES-256-CBC`.
+
+```js
+import { keyring } from "@fnando/keyring";
+
+const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
+const encryptor = keyring(keys, {encryption: "aes-256-cbc"});
 ```
 
 ### Using with Sequelize
@@ -143,7 +160,7 @@ const User = await sequelize.define("users", {
 //
 // For the purposes of this example, we're going to set keys manually.
 // WARNING: DON'T EVER DO THAT FOR REAL APPS.
-const keys = {1: "QSXyoiRDPoJmfkJUZ4hJeQ=="};
+const keys = {1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
 
 // This is the step you set up your model with hooks to encrypt/decrypt
 // columns. You can specify the encryption keys, which columns are going
@@ -162,30 +179,16 @@ Keyring(User, {
   const user = await User.create({email: "john@example.com"});
 
   console.log(JSON.stringify(user, null, 2));
-  // {
-  //   "id": "0d236060-ab3e-4b0e-a740-517a3fed84a4",
-  //   "email": "john@example.com",
-  //   "encrypted_email": "3eJrf1teqriot3shHozddrwaPeG6b/fzyQFzsXIPUxJ7GbgBjhOjkac5Q+d1pGG9",
-  //   "keyring_id": "1",
-  //   "email_digest": "5224cb6fdd5bbe463af1db8ee499e858fcb79f81"
-  // }
 
   // Let's update the email address.
   await user.update({email: "john.doe@example.com"});
 
   console.log(JSON.stringify(user, null, 2));
-  // {
-  //   "id": "021001c8-417e-4c7f-8642-f9d66a9734d5",
-  //   "email": "john.doe@example.com",
-  //   "encrypted_email": "DGOvw41eMSDiV0toCOleQfi69QwE7ODs5lkIhuNblDB/tt44E79AqCNK+KrpwnVK",
-  //   "keyring_id": 1,
-  //   "email_digest": "73ec53c4ba1747d485ae2a0d7bfafa6cda80a5a9"
-  // }
 
   // Now let's pretend that you set USER_KEYRING env var to a
   // {1: old_key, 2: new_key} or rollout a new JSON file via your
   // config management software, and restarted the app.
-  keys[2] = "r6AfOeilPDJomFsiOXLdfQ==";
+  keys[2] = "VN8UXRVMNbIh9FWEFVde0q7GUA1SGOie1+FgAKlNYHc=";
 
   // To simply roll out a new encryption, just call `.save()`.
   // This will trigger a `beforeSave` hook, which will re-encrypt
@@ -193,25 +196,11 @@ Keyring(User, {
   await user.save();
 
   console.log(JSON.stringify(user, null, 2));
-  // {
-  //   "id": "f904d454-9295-4f3e-8a6f-51c0f125fe12",
-  //   "email": "john.doe@example.com",
-  //   "encrypted_email": "PSxSXY+fGxKwcU8QGTywXEMY8zm2cVt/lSg5R3ljvN2O2AIAV/kYgPCk6eEutwLz",
-  //   "keyring_id": 2,
-  //   "email_digest": "73ec53c4ba1747d485ae2a0d7bfafa6cda80a5a9"
-  // }
 
   // Attributes are also re-encrypted when you call `.update()`.
   await user.update({email: "john@example.com"});
 
   console.log(JSON.stringify(user, null, 2));
-  // {
-  //   "id": "2a413a93-5f8b-494f-b01d-2edf1770a3d6",
-  //   "email": "john@example.com",
-  //   "encrypted_email": "0MZjAqjBn/FjFk7miaGsVllg2uckrymUDoL3kZL6g4PL/L44pVoz1L6uNmnY8bhW",
-  //   "keyring_id": 2,
-  //   "email_digest": "5224cb6fdd5bbe463af1db8ee499e858fcb79f81"
-  // }
 })();
 ```
 
@@ -228,13 +217,6 @@ const {sha1} = require("@fnando/keyring");
 await User.create({email: "john@example.com"});
 
 const user = await User.findOne({where: {email_digest: sha1("john@example.com")}});
-// {
-//   "id": "faaa070b-9f86-4cbb-968c-fe01a5e550ba",
-//   "email_digest": "5224cb6fdd5bbe463af1db8ee499e858fcb79f81",
-//   "encrypted_email": "FZorDYhrA6YpCit9gnAjiuPUUwTzl8F9XOXU89H1mcfpWibfG4Azlhx/g/Ry9Ic0",
-//   "keyring_id": "1",
-//   "email": "john@example.com"
-// }
 ```
 
 ### Exchange data with Ruby
