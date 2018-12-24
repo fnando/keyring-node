@@ -14,7 +14,7 @@ const Keyring = require("../sequelize");
     )
   `);
 
-  const keys = {1: "QSXyoiRDPoJmfkJUZ4hJeQ=="};
+  const keys = {1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
 
   let User = await sequelize.define("users", {
     id: {type: Sequelize.INTEGER, primaryKey: true},
@@ -49,7 +49,7 @@ const Keyring = require("../sequelize");
   console.log();
 
   console.log("🔁 rotate key");
-  keys[2] = "r6AfOeilPDJomFsiOXLdfQ==";
+  keys[2] = "VN8UXRVMNbIh9FWEFVde0q7GUA1SGOie1+FgAKlNYHc=";
 
   john = await User.findOne();
   // A `beforeSave` hook is triggered whenever you call `save`.
@@ -73,7 +73,7 @@ const Keyring = require("../sequelize");
   console.log();
 
   console.log("🔁 rotate key and update email");
-  keys[3] = "YYRD+EpkrAlhq3e2mo1t0A==";
+  keys[3] = "VV3X9u91C5siPvYeFb0Ne43Twxi6NQXkAniVvnzAgrg=";
 
   john.email = "john.doe@example.com";
   await john.save();

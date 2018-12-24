@@ -1,5 +1,6 @@
 /**
  * Node's crypto module.
+ *
  * @constant
  * @type {Object}
  */
@@ -7,11 +8,25 @@ const crypto = require("crypto");
 
 /**
  * Set the default keyring options.
+ *
  * @constant
  * @type {Object}
  */
 const defaultKeyringOptions = {
   encryption: "aes-128-cbc",
+};
+
+/**
+ * Expected key size. It's the double of the actual size because
+ * half of the key is used as the HMAC key.
+ *
+ * @constant
+ * @type {Object}
+ */
+const keySizes = {
+  "aes-128-cbc": 16,
+  "aes-192-cbc": 24,
+  "aes-256-cbc": 32
 };
 
 /**
@@ -28,8 +43,14 @@ const defaultKeyringOptions = {
 function keyring(keys, options = {}) {
   options = Object.assign({}, defaultKeyringOptions, options);
 
+  const keySize = keySizes[options.encryption];
+
+  if (!keySize) {
+    throw new Error(`Invalid encryption algorithm: ${options.encryption}`);
+  }
+
   // Convert keyring object into array of keys.
-  keys = normalizeKeys(keys);
+  keys = normalizeKeys(keys, keySize);
   validateKeyring(keys);
 
   return {
@@ -53,16 +74,17 @@ function keyring(keys, options = {}) {
 function encrypt(keys, {encryption}, message) {
   const key = currentKey(keys);
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(encryption, key.value, iv);
+  const cipher = crypto.createCipheriv(encryption, key.encryptionKey, iv);
   const encrypted = Buffer.concat([
-    iv,
     cipher.update(Buffer.from(message)),
     cipher.final()
-  ]).toString("base64");
+  ]);
 
+  const hmac = hmacDigest(key.signingKey, Buffer.concat([iv, encrypted]));
+  const returnValue = Buffer.concat([hmac, iv, encrypted]).toString("base64");
   const digest = sha1(message);
 
-  return [encrypted, key.id, digest];
+  return [returnValue, key.id, digest];
 }
 
 /**
@@ -77,13 +99,20 @@ function encrypt(keys, {encryption}, message) {
  */
 function decrypt(key, {encryption}, message) {
   const decoded = Buffer.from(message, "base64");
-  const iv = decoded.slice(0, 16);
-  const encrypted = decoded.slice(16);
-  const decipher = crypto.createDecipheriv(encryption, key.value, iv);
+  const hmac = decoded.slice(0, 32);
+  const iv = decoded.slice(32, 48);
+  const encrypted = decoded.slice(48);
+  const decipher = crypto.createDecipheriv(encryption, key.encryptionKey, iv);
   const decrypted = Buffer.concat([
     decipher.update(encrypted),
     decipher.final()
   ]);
+
+  const expectedHmac = hmacDigest(key.signingKey, Buffer.concat([iv, encrypted]));
+
+  if (!verifySignature(expectedHmac, hmac)) {
+    throw new Error(`Expected HMAC to be ${expectedHmac.toString("base64")}; got ${hmac.toString("base64")} instead`);
+  }
 
   return decrypted.toString();
 }
@@ -155,11 +184,23 @@ function validateKeyring(keys) {
  * @param  {Object} keys  The raw encryption keys object.
  * @return {Array}        List of key objects.
  */
-function normalizeKeys(keys) {
+function normalizeKeys(keys, keySize) {
+  const expectedKeySize = keySize * 2;
+
   return Object.keys(keys).reduce((buffer, id) => {
+    const secret = keyBuffer(keys[id]);
+
+    if (secret.length !== expectedKeySize) {
+      throw new Error(`Expected key to be ${expectedKeySize} bytes long; got ${secret.length} instead`);
+    }
+
+    const signingKey = secret.slice(0, keySize);
+    const encryptionKey = secret.slice(keySize);
+
     buffer.push({
       id: parseInt(id, 10),
-      value: keyBuffer(keys[id])
+      encryptionKey,
+      signingKey
     });
 
     return buffer;
@@ -224,6 +265,47 @@ function findKey(keys, id) {
  */
 function isString(object) {
   return typeof(object) === "string" || object instanceof String;
+}
+
+/**
+ * Create HMAC from given message.
+ *
+ * @private This function is used by encrypt().
+ *
+ * @param  {Buffer} key      The hashing key.
+ * @param  {String} message  The target message.
+ * @return {Buffer}          The authentication code in binary format.
+ */
+function hmacDigest(key, message) {
+  const hmac = crypto.createHmac("sha256", key);
+  hmac.update(message);
+  const digest = hmac.digest();
+  hmac.end();
+
+  return digest;
+}
+
+/**
+ * Verify HMAC signature.
+ *
+ * @private Used by decrypt().
+ *
+ * @param  {Buffer}   expected The expected buffer.
+ * @param  {Buffer}   actual   The actual buffer.
+ * @return {Boolean}           Returns `true` when signature matches.
+ */
+function verifySignature(expected, actual) {
+  let accum = 0;
+
+  if (expected.length !== actual.length) {
+    return false;
+  }
+
+  for (let i = 0; i < expected.length; i++) {
+    accum |= expected[i] ^ actual[i];
+  }
+
+  return accum === 0
 }
 
 /**
