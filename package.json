@@ -1,6 +1,6 @@
 {
   "name": "@fnando/keyring",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Simple encryption-at-rest with key rotation.",
   "main": "keyring.js",
   "repository": "https://github.com/fnando/keyring-node.git",
