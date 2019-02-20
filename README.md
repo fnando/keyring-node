@@ -168,7 +168,7 @@ const keys = {1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
 // keyring id column. You can see below the default values for `encryption`
 // and keyring id column.
 Keyring(User, {
-  keys,                      // [required]
+  keys,                            // [required]
   columns: ["email"],              // [required]
   keyringIdColumn: "keyring_id",   // [optional]
   encryption: "aes-128-cbc"        // [optional]
