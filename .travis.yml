@@ -1,3 +1,4 @@
+---
 sudo: false
 language: node_js
 notifications:
@@ -12,3 +13,5 @@ cache:
     - node_modules
 before_script:
   - createdb test
+services:
+  - postgresql
