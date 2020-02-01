@@ -10,10 +10,11 @@ function beforeSave(record, options) {
     keys,
     keyringIdColumn,
     encryption,
-    columns
+    columns,
+    digestSalt
   } = record._modelOptions.keyring;
 
-  const keyring = Keyring(keys, {encryption});
+  const keyring = Keyring(keys, {encryption, digestSalt});
 
   columns.forEach(column => {
     const digestColumn = `${column}_digest`;
@@ -46,10 +47,11 @@ function afterFind(record) {
     keys,
     keyringIdColumn,
     encryption,
-    columns
+    columns,
+    digestSalt
   } = record._modelOptions.keyring;
 
-  const keyring = Keyring(keys, {encryption});
+  const keyring = Keyring(keys, {encryption, digestSalt});
   const keyringId = record[keyringIdColumn];
 
   columns.forEach(column => {
@@ -60,8 +62,8 @@ function afterFind(record) {
   });
 }
 
-function setup(model, {keys, columns, encryption = "aes-128-cbc", keyringIdColumn = "keyring_id"}) {
-  model.options.keyring = {keys, columns, encryption, keyringIdColumn};
+function setup(model, {keys, columns, digestSalt, encryption = "aes-128-cbc", keyringIdColumn = "keyring_id"}) {
+  model.options.keyring = {keys, columns, encryption, keyringIdColumn, digestSalt};
   model.beforeSave(beforeSave);
   model.afterFind(afterFind);
 };

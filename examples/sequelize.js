@@ -28,10 +28,13 @@ const Keyring = require("../sequelize");
     keyring_id: Sequelize.INTEGER
   }, {timestamps: false});
 
+  const digestSalt = "salt-n-pepper";
+
   // This is how you initialize a model.
   Keyring(User, {
     keys,                           // [required] set the encryption keys
     columns: ["email", "secret"],   // [required] set all encrypted columns
+    digestSalt,                     // [required] set the digest salt
     encryption: "aes-128-cbc",      // [optional] set encryption algorithm (defaults to aes-128-cbc)
     keyringIdColumn: "keyring_id",  // [optional] set the keyring id column (defaults to keyring_id)
   });
@@ -67,7 +70,7 @@ const Keyring = require("../sequelize");
   console.log();
 
   console.log("🔎 search by email digest");
-  const user = await User.findOne({where: {email_digest: sha1(john.email)}});
+  const user = await User.findOne({where: {email_digest: sha1(john.email, {digestSalt})}});
 
   console.log(JSON.stringify(user.dataValues, null, 2));
   console.log();

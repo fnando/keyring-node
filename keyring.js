@@ -30,6 +30,12 @@ const keySizes = {
 };
 
 /**
+ * @internal
+ * @private
+ */
+const missingDigestSaltError = "Please provide `digestSalt` option; you can disable this error by explicitly passing an empty string.";
+
+/**
  * Create a new keyring.
  * A keyring is a combination of keys and functions for encryption/decryption.
  *
@@ -38,10 +44,16 @@ const keySizes = {
  * @param  {Object}  options             The keyring options.
  * @param  {String}  options.encryption  The encryption algorithm.
  *                                       Can be `aes-128-cbc`, `aes-192-cbc` or `aes-256-cbc`.
+ * @param  {String}  options.digestSalt  Any random string that will be append to
+ *                                       the message when generating SHA1.
  * @return {String}                      An object containing functions for encryption/decryption.
  */
 function keyring(keys, options = {}) {
   options = Object.assign({}, defaultKeyringOptions, options);
+
+  if (options.digestSalt === undefined) {
+    throw new Error(missingDigestSaltError);
+  }
 
   const keySize = keySizes[options.encryption];
 
@@ -56,6 +68,7 @@ function keyring(keys, options = {}) {
   return {
     encrypt: message => encrypt(keys, options, message),
     decrypt: (message, keyringId) => decrypt(findKey(keys, keyringId), options, message),
+    digest: (message) => sha1(message, options),
     currentId: () => currentKey(keys).id
   }
 }
@@ -71,7 +84,7 @@ function keyring(keys, options = {}) {
  * @return {Array}           An array with three items representing the encrypted
  *                           value, the digest, and the keyring id, respectively.
  */
-function encrypt(keys, {encryption}, message) {
+function encrypt(keys, {encryption, digestSalt} = {}, message) {
   const key = currentKey(keys);
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(encryption, key.encryptionKey, iv);
@@ -82,7 +95,7 @@ function encrypt(keys, {encryption}, message) {
 
   const hmac = hmacDigest(key.signingKey, Buffer.concat([iv, encrypted]));
   const returnValue = Buffer.concat([hmac, iv, encrypted]).toString("base64");
-  const digest = sha1(message);
+  const digest = sha1(message, {digestSalt});
 
   return [returnValue, key.id, digest];
 }
@@ -144,13 +157,17 @@ function resolveDigestSuffix(prop, suffix) {
  * @param  {String} value
  * @return {String}        Hex-encoded string representing the SHA1 digest for the given string.
  */
-function sha1(value) {
+function sha1(value, {digestSalt} = {}) {
+  if (digestSalt === undefined) {
+    throw new Error(missingDigestSaltError);
+  }
+
   if (!isString(value)) {
     throw new Error(`You can only generated SHA1 digests from strings (received "${typeof value}" instead).`);
   }
 
   const hash = crypto.createHash("sha1");
-  hash.update(value);
+  hash.update(`${value}${digestSalt}`);
   return hash.digest("hex");
 }
 

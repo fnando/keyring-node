@@ -9,7 +9,7 @@ const scenarios = {
     test("updates attribute", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      const krng = keyring(keys, {encryption});
+      const krng = keyring(keys, {encryption, digestSalt: ""});
 
       let [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
@@ -29,7 +29,7 @@ const scenarios = {
     test("encrypts value", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      const krng = keyring(keys, {encryption});
+      const krng = keyring(keys, {encryption, digestSalt: ""});
 
       const [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
@@ -44,7 +44,7 @@ const scenarios = {
     test("decrypts value", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      const krng = keyring(keys, {encryption});
+      const krng = keyring(keys, {encryption, digestSalt: ""});
       const decrypted = krng.decrypt(scenario.encrypted.value, scenario.encrypted.keyring_id);
 
       assert.equal(decrypted, scenario.input);
@@ -55,7 +55,7 @@ const scenarios = {
     test("rotates key", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      let krng = keyring(keys, {encryption});
+      let krng = keyring(keys, {encryption, digestSalt: ""});
       let [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
       assert.equal(keyringId, scenario.encrypted.keyring_id);
@@ -63,7 +63,7 @@ const scenarios = {
       assert.equal(krng.decrypt(encrypted, keyringId), scenario.input);
 
       keys[scenario.rotate.key.id] = scenario.rotate.key.value
-      krng = keyring(keys, {encryption});
+      krng = keyring(keys, {encryption, digestSalt: ""});
       [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
       assert.equal(keyringId, scenario.rotate.encrypted.keyring_id);

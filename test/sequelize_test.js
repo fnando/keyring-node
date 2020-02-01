@@ -6,7 +6,7 @@ const Keyring = require("../sequelize");
 const Sequelize = require("sequelize");
 const sequelize = new Sequelize("postgres:///test", {logging: false});
 
-async function defineModel({keys, columns = ["email", "secret"], encryption = "aes-128-cbc", keyringIdColumn = "keyring_id"}) {
+async function defineModel({keys, columns = ["email", "secret"], encryption = "aes-128-cbc", keyringIdColumn = "keyring_id", digestSalt = ""}) {
   const model = await sequelize.define("users", {
     id: {
       type: Sequelize.UUIDV4,
@@ -24,7 +24,7 @@ async function defineModel({keys, columns = ["email", "secret"], encryption = "a
     custom_keyring_id: Sequelize.INTEGER
   }, {timestamps: false});
 
-  Keyring(model, {keys, columns, encryption, keyringIdColumn});
+  Keyring(model, {keys, columns, encryption, keyringIdColumn, digestSalt});
 
   return model;
 }
@@ -131,7 +131,7 @@ suite("sequelize", () => {
     await user.reload();
 
     assert.equal(user.email, "NEW EMAIL");
-    assert.equal(user.email_digest, sha1("NEW EMAIL"));
+    assert.equal(user.email_digest, sha1("NEW EMAIL", {digestSalt: ""}));
     assert.equal(user.secret, "NEW SECRET");
   });
 
@@ -166,7 +166,7 @@ suite("sequelize", () => {
 
     await user.reload();
 
-    assert.equal(user.email_digest, sha1("EMAIL"));
+    assert.equal(user.email_digest, sha1("EMAIL", {digestSalt: ""}));
     assert.equal(user.secret_digest, undefined);
   });
 

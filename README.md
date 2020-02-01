@@ -78,7 +78,7 @@ N.B.: Keys are hardcoded on these examples, but you shouldn't do it on your code
 import { keyring } from "@fnando/keyring";
 
 const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
-const encryptor = keyring(keys);
+const encryptor = keyring(keys, {digestSalt: "<custom salt>"});
 
 // STEP 1: Encrypt message using latest encryption key.
 const [encrypted, keyringId, digest] = encryptor.encrypt("super secret");
@@ -106,7 +106,7 @@ To specify the encryption algorithm, set the `encryption` option. The following 
 import { keyring } from "@fnando/keyring";
 
 const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
-const encryptor = keyring(keys, {encryption: "aes-256-cbc"});
+const encryptor = keyring(keys, {encryption: "aes-256-cbc", digestSalt: "<custom salt>"});
 ```
 
 ### Using with Sequelize
@@ -170,6 +170,7 @@ const keys = {1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
 Keyring(User, {
   keys,                            // [required]
   columns: ["email"],              // [required]
+  digestSalt: "<custom salt>",     // [required]
   keyringIdColumn: "keyring_id",   // [optional]
   encryption: "aes-128-cbc"        // [optional]
 });
@@ -208,7 +209,8 @@ Keyring(User, {
 
 One tricky aspect of encryption is looking up records by known secret. To solve this problem, you can generate SHA1 digests for strings that are encrypted and save them to the database.
 
-`keyring` detects the presence of `<attribute>_digest` columns and update them accordingly with a SHA1 digest that can be used for unique indexing or searching.
+`keyring` detects the presence of `<attribute>_digest` columns and update them accordingly with a SHA1 digest that can be used for unique indexing or searching. You don't have to use a hashing salt, but it's highly recommended; this
+way you can avoid leaking your users' info via rainbow tables.
 
 ```js
 // A utility function to generate SHA1s out of strings.
@@ -216,7 +218,7 @@ const {sha1} = require("@fnando/keyring");
 
 await User.create({email: "john@example.com"});
 
-const user = await User.findOne({where: {email_digest: sha1("john@example.com")}});
+const user = await User.findOne({where: {email_digest: sha1("john@example.com", {digestSalt: "<custom salt>"})}});
 ```
 
 ### Exchange data with Ruby
