@@ -1,7 +1,7 @@
 {
   "name": "@fnando/keyring",
   "version": "0.3.0",
-  "description": "Simple encryption-at-rest with key rotation.",
+  "description": "Simple encryption-at-rest with key rotation. Includes sequelize support.",
   "main": "keyring.js",
   "repository": "https://github.com/fnando/keyring-node.git",
   "author": "Nando Vieira",
@@ -9,6 +9,13 @@
   "scripts": {
     "test": "mocha 'test/**/*_test.js' --ui tdd"
   },
+  "keywords": [
+    "encryption",
+    "crypt",
+    "crypto",
+    "sequelize",
+    "plugin"
+  ],
   "devDependencies": {
     "chai": "*",
     "mocha": "*",
