@@ -1,7 +1,7 @@
 const { keyring } = require("../keyring");
 
-const keys = {"1": "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M="};
-const encryptor = keyring(keys, {digestSalt: "salt-n-pepper"});
+const keys = { 1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M=" };
+const encryptor = keyring(keys, { digestSalt: "salt-n-pepper" });
 
 // STEP 1: Encrypt message using latest encryption key.
 const [encrypted, keyringId, digest] = encryptor.encrypt("super secret");

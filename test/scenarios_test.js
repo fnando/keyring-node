@@ -1,15 +1,15 @@
-const {assert} = require("chai");
+const { assert } = require("chai");
 const fs = require("fs");
 const data = JSON.parse(fs.readFileSync(`${__dirname}/data.json`));
 
-const {keyring} = require("../keyring");
+const { keyring } = require("../keyring");
 
 const scenarios = {
   update(encryption, scenario) {
     test("updates attribute", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      const krng = keyring(keys, {encryption, digestSalt: ""});
+      const krng = keyring(keys, { encryption, digestSalt: "" });
 
       let [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
@@ -29,7 +29,7 @@ const scenarios = {
     test("encrypts value", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      const krng = keyring(keys, {encryption, digestSalt: ""});
+      const krng = keyring(keys, { encryption, digestSalt: "" });
 
       const [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
@@ -44,8 +44,11 @@ const scenarios = {
     test("decrypts value", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      const krng = keyring(keys, {encryption, digestSalt: ""});
-      const decrypted = krng.decrypt(scenario.encrypted.value, scenario.encrypted.keyring_id);
+      const krng = keyring(keys, { encryption, digestSalt: "" });
+      const decrypted = krng.decrypt(
+        scenario.encrypted.value,
+        scenario.encrypted.keyring_id,
+      );
 
       assert.equal(decrypted, scenario.input);
     });
@@ -55,15 +58,15 @@ const scenarios = {
     test("rotates key", () => {
       const keys = {};
       keys[scenario.key.id] = scenario.key.value;
-      let krng = keyring(keys, {encryption, digestSalt: ""});
+      let krng = keyring(keys, { encryption, digestSalt: "" });
       let [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
       assert.equal(keyringId, scenario.encrypted.keyring_id);
       assert.equal(digest, scenario.encrypted.digest);
       assert.equal(krng.decrypt(encrypted, keyringId), scenario.input);
 
-      keys[scenario.rotate.key.id] = scenario.rotate.key.value
-      krng = keyring(keys, {encryption, digestSalt: ""});
+      keys[scenario.rotate.key.id] = scenario.rotate.key.value;
+      krng = keyring(keys, { encryption, digestSalt: "" });
       [encrypted, keyringId, digest] = krng.encrypt(scenario.input);
 
       assert.equal(keyringId, scenario.rotate.encrypted.keyring_id);
@@ -73,9 +76,9 @@ const scenarios = {
   },
 };
 
-Object.keys(data).forEach(encryption => {
+Object.keys(data).forEach((encryption) => {
   suite(`tests for ${encryption}`, () => {
-    data[encryption].forEach(scenario => {
+    data[encryption].forEach((scenario) => {
       scenarios[scenario.action](encryption, scenario);
     });
   });

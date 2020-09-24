@@ -2,7 +2,12 @@ const Sequelize = require("sequelize");
 const Keyring = require("./keyring").keyring;
 
 function isString(value) {
-  return typeof(value) === "string" || value instanceof String;
+  return typeof value === "string" || value instanceof String;
+}
+
+function getModelOptions(record) {
+  // This handles the change introduced by sequelize@v6.
+  return record._modelOptions || record.constructor.options;
 }
 
 function beforeSave(record, options) {
@@ -11,12 +16,12 @@ function beforeSave(record, options) {
     keyringIdColumn,
     encryption,
     columns,
-    digestSalt
-  } = record._modelOptions.keyring;
+    digestSalt,
+  } = getModelOptions(record).keyring;
 
-  const keyring = Keyring(keys, {encryption, digestSalt});
+  const keyring = Keyring(keys, { encryption, digestSalt });
 
-  columns.forEach(column => {
+  columns.forEach((column) => {
     const digestColumn = `${column}_digest`;
     const value = record[column];
     let encrypted = null;
@@ -30,7 +35,11 @@ function beforeSave(record, options) {
     record[`encrypted_${column}`] = encrypted;
     record[keyringIdColumn] = keyringId;
 
-    if (record.attributes.includes(digestColumn)) {
+    // This handles the change introduced by sequelize@v5.
+    const attributes =
+      record.attributes || Object.keys(record.constructor.rawAttributes);
+
+    if (attributes.includes(digestColumn)) {
       record[digestColumn] = digest;
     }
   });
@@ -48,24 +57,41 @@ function afterFind(record) {
     keyringIdColumn,
     encryption,
     columns,
-    digestSalt
-  } = record._modelOptions.keyring;
+    digestSalt,
+  } = getModelOptions(record).keyring;
 
-  const keyring = Keyring(keys, {encryption, digestSalt});
+  const keyring = Keyring(keys, { encryption, digestSalt });
   const keyringId = record[keyringIdColumn];
 
-  columns.forEach(column => {
+  columns.forEach((column) => {
     const keyringId = record[keyringIdColumn];
     const encrypted = record[`encrypted_${column}`];
-    const value = isString(encrypted) ? keyring.decrypt(encrypted, keyringId) : null;
+    const value = isString(encrypted)
+      ? keyring.decrypt(encrypted, keyringId)
+      : null;
     record[column] = value;
   });
 }
 
-function setup(model, {keys, columns, digestSalt, encryption = "aes-128-cbc", keyringIdColumn = "keyring_id"}) {
-  model.options.keyring = {keys, columns, encryption, keyringIdColumn, digestSalt};
+function setup(
+  model,
+  {
+    keys,
+    columns,
+    digestSalt,
+    encryption = "aes-128-cbc",
+    keyringIdColumn = "keyring_id",
+  },
+) {
+  model.options.keyring = {
+    keys,
+    columns,
+    encryption,
+    keyringIdColumn,
+    digestSalt,
+  };
   model.beforeSave(beforeSave);
   model.afterFind(afterFind);
-};
+}
 
 module.exports = setup;

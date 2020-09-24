@@ -26,14 +26,15 @@ const defaultKeyringOptions = {
 const keySizes = {
   "aes-128-cbc": 16,
   "aes-192-cbc": 24,
-  "aes-256-cbc": 32
+  "aes-256-cbc": 32,
 };
 
 /**
  * @internal
  * @private
  */
-const missingDigestSaltError = "Please provide `digestSalt` option; you can disable this error by explicitly passing an empty string.";
+const missingDigestSaltError =
+  "Please provide `digestSalt` option; you can disable this error by explicitly passing an empty string.";
 
 /**
  * Create a new keyring.
@@ -66,11 +67,12 @@ function keyring(keys, options = {}) {
   validateKeyring(keys);
 
   return {
-    encrypt: message => encrypt(keys, options, message),
-    decrypt: (message, keyringId) => decrypt(findKey(keys, keyringId), options, message),
+    encrypt: (message) => encrypt(keys, options, message),
+    decrypt: (message, keyringId) =>
+      decrypt(findKey(keys, keyringId), options, message),
     digest: (message) => sha1(message, options),
-    currentId: () => currentKey(keys).id
-  }
+    currentId: () => currentKey(keys).id,
+  };
 }
 
 /**
@@ -84,18 +86,18 @@ function keyring(keys, options = {}) {
  * @return {Array}           An array with three items representing the encrypted
  *                           value, the digest, and the keyring id, respectively.
  */
-function encrypt(keys, {encryption, digestSalt} = {}, message) {
+function encrypt(keys, { encryption, digestSalt } = {}, message) {
   const key = currentKey(keys);
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(encryption, key.encryptionKey, iv);
   const encrypted = Buffer.concat([
     cipher.update(Buffer.from(message)),
-    cipher.final()
+    cipher.final(),
   ]);
 
   const hmac = hmacDigest(key.signingKey, Buffer.concat([iv, encrypted]));
   const returnValue = Buffer.concat([hmac, iv, encrypted]).toString("base64");
-  const digest = sha1(message, {digestSalt});
+  const digest = sha1(message, { digestSalt });
 
   return [returnValue, key.id, digest];
 }
@@ -110,7 +112,7 @@ function encrypt(keys, {encryption, digestSalt} = {}, message) {
  * @param  {Object} source   The object that will have its properties decrypted.
  * @return {Object}          The object with decrypted properties.
  */
-function decrypt(key, {encryption}, message) {
+function decrypt(key, { encryption }, message) {
   const decoded = Buffer.from(message, "base64");
   const hmac = decoded.slice(0, 32);
   const iv = decoded.slice(32, 48);
@@ -118,13 +120,20 @@ function decrypt(key, {encryption}, message) {
   const decipher = crypto.createDecipheriv(encryption, key.encryptionKey, iv);
   const decrypted = Buffer.concat([
     decipher.update(encrypted),
-    decipher.final()
+    decipher.final(),
   ]);
 
-  const expectedHmac = hmacDigest(key.signingKey, Buffer.concat([iv, encrypted]));
+  const expectedHmac = hmacDigest(
+    key.signingKey,
+    Buffer.concat([iv, encrypted]),
+  );
 
   if (!verifySignature(expectedHmac, hmac)) {
-    throw new Error(`Expected HMAC to be ${expectedHmac.toString("base64")}; got ${hmac.toString("base64")} instead`);
+    throw new Error(
+      `Expected HMAC to be ${expectedHmac.toString(
+        "base64",
+      )}; got ${hmac.toString("base64")} instead`,
+    );
   }
 
   return decrypted.toString();
@@ -157,13 +166,15 @@ function resolveDigestSuffix(prop, suffix) {
  * @param  {String} value
  * @return {String}        Hex-encoded string representing the SHA1 digest for the given string.
  */
-function sha1(value, {digestSalt} = {}) {
+function sha1(value, { digestSalt } = {}) {
   if (digestSalt === undefined) {
     throw new Error(missingDigestSaltError);
   }
 
   if (!isString(value)) {
-    throw new Error(`You can only generated SHA1 digests from strings (received "${typeof value}" instead).`);
+    throw new Error(
+      `You can only generated SHA1 digests from strings (received "${typeof value}" instead).`,
+    );
   }
 
   const hash = crypto.createHash("sha1");
@@ -185,7 +196,7 @@ function validateKeyring(keys) {
     throw new Error("You must initialize the keyring");
   }
 
-  const invalidIds = keys.some(key => isNaN(key.id));
+  const invalidIds = keys.some((key) => isNaN(key.id));
 
   if (invalidIds) {
     throw new Error("All keyring keys must be integer numbers");
@@ -208,7 +219,9 @@ function normalizeKeys(keys, keySize) {
     const secret = keyBuffer(keys[id]);
 
     if (secret.length !== expectedKeySize) {
-      throw new Error(`Expected key to be ${expectedKeySize} bytes long; got ${secret.length} instead`);
+      throw new Error(
+        `Expected key to be ${expectedKeySize} bytes long; got ${secret.length} instead`,
+      );
     }
 
     const signingKey = secret.slice(0, keySize);
@@ -217,7 +230,7 @@ function normalizeKeys(keys, keySize) {
     buffer.push({
       id: parseInt(id, 10),
       encryptionKey,
-      signingKey
+      signingKey,
     });
 
     return buffer;
@@ -251,7 +264,7 @@ function keyBuffer(value) {
  */
 function currentKey(keys) {
   return keys.reduce((a, b) => {
-    return (a.id > b.id) ? a : b;
+    return a.id > b.id ? a : b;
   });
 }
 
@@ -266,7 +279,7 @@ function currentKey(keys) {
  * @return {Object}       The matching key object.
  */
 function findKey(keys, id) {
-  const key = keys.find(key => parseInt(key.id) === parseInt(id, 10));
+  const key = keys.find((key) => parseInt(key.id) === parseInt(id, 10));
 
   if (key) {
     return key;
@@ -281,7 +294,7 @@ function findKey(keys, id) {
  * @return {Boolean}
  */
 function isString(object) {
-  return typeof(object) === "string" || object instanceof String;
+  return typeof object === "string" || object instanceof String;
 }
 
 /**
@@ -322,7 +335,7 @@ function verifySignature(expected, actual) {
     accum |= expected[i] ^ actual[i];
   }
 
-  return accum === 0
+  return accum === 0;
 }
 
 /**
@@ -333,5 +346,5 @@ function verifySignature(expected, actual) {
 module.exports = {
   keyring,
   sha1,
-  options: defaultKeyringOptions
+  options: defaultKeyringOptions,
 };

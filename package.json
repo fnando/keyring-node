@@ -13,7 +13,7 @@
     "chai": "*",
     "mocha": "*",
     "pg": "*",
-    "sequelize": "4.x",
+    "sequelize": "6.x",
     "sqlite3": "*"
   }
 }
