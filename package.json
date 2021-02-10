@@ -21,6 +21,7 @@
     "mocha": "*",
     "pg": "*",
     "sequelize": "6.x",
-    "sqlite3": "*"
+    "sqlite3": "*",
+    "lodash": "*"
   }
 }
