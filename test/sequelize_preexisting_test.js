@@ -25,9 +25,9 @@ async function defineModel({
       },
       encrypted_email: Sequelize.TEXT,
       email_digest: Sequelize.TEXT,
-      email: Sequelize.VIRTUAL,
+      email: Sequelize.TEXT,
       encrypted_secret: Sequelize.TEXT,
-      secret: Sequelize.VIRTUAL,
+      secret: Sequelize.TEXT,
 
       keyring_id: Sequelize.INTEGER,
       custom_keyring_id: Sequelize.INTEGER,
@@ -50,7 +50,7 @@ async function defineModel({
   return model;
 }
 
-suite("sequelize", () => {
+suite("sequelize-preexisting", () => {
   setup(async () => {
     await sequelize.query("create extension if not exists pgcrypto;");
     await sequelize.query("create extension if not exists citext;");
@@ -59,6 +59,8 @@ suite("sequelize", () => {
     await sequelize.query(`
       create table users (
         id citext primary key not null,
+        email text,
+        secret text,
         encrypted_email text,
         encrypted_secret text,
         email_digest text,
@@ -123,6 +125,22 @@ suite("sequelize", () => {
 
     assert.equal(user.email, "EMAIL");
     assert.equal(user.secret, "SECRET");
+
+    const rawUser = (await sequelize.query('SELECT * from users'))[0][0]
+    assert.notEqual(rawUser.email, "EMAIL");
+    assert.notEqual(rawUser.secret, "SECRET");
+  });
+
+  test("loads one record - plaintext preexisting", async () => {
+    const User = await defineModel({
+      keys: { 1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M=" },
+    });
+
+    await User.create({ email: "EMAIL", secret: "SECRET" }, { hooks: false });
+    const user = (await sequelize.query('SELECT * from users'))[0][0]
+
+    assert.equal(user.email, "EMAIL");
+    assert.equal(user.secret, "SECRET");
   });
 
   test("loads several records", async () => {
@@ -133,6 +151,28 @@ suite("sequelize", () => {
     await User.create({ email: "EMAIL1", secret: "SECRET1" });
     await User.create({ email: "EMAIL2", secret: "SECRET2" });
     const users = await User.findAll();
+
+    assert.equal(users[0].email, "EMAIL1");
+    assert.equal(users[0].secret, "SECRET1");
+
+    assert.equal(users[1].email, "EMAIL2");
+    assert.equal(users[1].secret, "SECRET2");
+
+    const rawUsers = (await sequelize.query('SELECT * from users'))[0];
+    assert.notEqual(rawUsers[0].email, "EMAIL1");
+    assert.notEqual(rawUsers[0].secret, "SECRET1");
+    assert.notEqual(rawUsers[1].email, "EMAIL2");
+    assert.notEqual(rawUsers[1].secret, "SECRET2");
+  });
+
+  test("loads several records - plaintext prexisting", async () => {
+    const User = await defineModel({
+      keys: { 1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M=" },
+    });
+
+    await User.create({ email: "EMAIL1", secret: "SECRET1" }, { hooks: false });
+    await User.create({ email: "EMAIL2", secret: "SECRET2" }, { hooks: false });
+    const users = (await sequelize.query('SELECT * from users'))[0];
 
     assert.equal(users[0].email, "EMAIL1");
     assert.equal(users[0].secret, "SECRET1");
@@ -154,6 +194,48 @@ suite("sequelize", () => {
     assert.equal(user.email, "NEW EMAIL");
     assert.equal(user.email_digest, sha1("NEW EMAIL", { digestSalt: "" }));
     assert.equal(user.secret, "NEW SECRET");
+
+    const rawUser = (await sequelize.query('SELECT * from users'))[0][0]
+    assert.equal(rawUser.email, null);
+    assert.equal(rawUser.secret, null);
+  });
+
+  test("updates record - plaintext preexisting", async () => {
+    const User = await defineModel({
+      keys: { 1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M=" },
+    });
+
+    const user = await User.create({ email: "EMAIL", secret: "SECRET" }, { hooks: false });
+
+    await user.update({ email: "NEW EMAIL", secret: "NEW SECRET" });
+    await user.reload();
+
+    assert.equal(user.email, "NEW EMAIL");
+    assert.equal(user.email_digest, sha1("NEW EMAIL", { digestSalt: "" }));
+    assert.equal(user.secret, "NEW SECRET");
+
+    const rawUser = (await sequelize.query('SELECT * from users'))[0][0]
+    assert.equal(rawUser.email, null);
+    assert.equal(rawUser.secret, null);
+  });
+
+  test("updates record - plaintext preexisting - same value", async () => {
+    const User = await defineModel({
+      keys: { 1: "uDiMcWVNTuz//naQ88sOcN+E40CyBRGzGTT7OkoBS6M=" },
+    });
+
+    const user = await User.create({ email: "EMAIL", secret: "SECRET" }, { hooks: false });
+
+    await user.update({ email: "EMAIL", secret: "SECRET" });
+    await user.reload();
+
+    assert.equal(user.email, "EMAIL");
+    assert.equal(user.email_digest, sha1("EMAIL", { digestSalt: "" }));
+    assert.equal(user.secret, "SECRET");
+
+    const rawUser = (await sequelize.query('SELECT * from users'))[0][0]
+    assert.equal(rawUser.email, null);
+    assert.equal(rawUser.secret, null);
   });
 
   test("saves keyring id", async () => {

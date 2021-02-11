@@ -290,6 +290,8 @@ messages using the same format.
 After checking out the repo, run `yarn install` to install dependencies. Then,
 run `yarn test` to run the tests.
 
+Create a postgres db called test for this tests `CREATE DATABASE test OWNER jerry_test;`
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at
