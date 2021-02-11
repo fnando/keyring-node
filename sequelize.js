@@ -6,11 +6,26 @@ const KeyringNode = require("./keyring");
 
 const Keyring = KeyringNode.keyring;
 
+/**
+ * Keep track of keyring options when we can't attach it to the model
+ * eg. equelize-typescript
+ */
+const OptionsHack = {};
+
+/**
+ * Pull keyring options from model
+ */
 function getModelOptions(record) {
+  if (OptionsHack[record.constructor.name]) {
+    return OptionsHack[record.constructor.name];
+  }
   // This handles the change introduced by sequelize@v6.
   return record._modelOptions || record.constructor.options;
 }
 
+/**
+ * Encrypt records before saving
+ */
 function beforeSave(record) {
   const {
     keys,
@@ -53,10 +68,16 @@ function beforeSave(record) {
   });
 }
 
+/**
+ * Decrypt records after saving
+ */
 function afterSave(record) {
   afterFind(record);
 }
 
+/**
+ * Decrypt records after finding
+ */
 function afterFind(record) {
   if (!record) {
     return;
@@ -100,17 +121,18 @@ function afterFind(record) {
   });
 }
 
-function setup(
-  model,
-  {
-    keys,
-    columns,
-    digestSalt,
-    encryption = "aes-128-cbc",
-    keyringIdColumns = {},
-  },
+/**
+ * Generate keyring options
+ */
+function genKeyring(name, {
+  keys,
+  columns,
+  digestSalt,
+  encryption = "aes-128-cbc",
+  keyringIdColumns = {},
+},
 ) {
-  model.options.keyring = {
+  const keyring = {
     keys,
     columns,
     encryption,
@@ -124,11 +146,31 @@ function setup(
     }
   }
 
+  if (name) {
+    OptionsHack[name] = {
+      keyring
+    }
+  }
+  return keyring;
+}
+
+/**
+ * Attach keyring options to model
+ */
+function setup(
+  model,
+  args,
+) {
+  model.options.keyring = genKeyring(undefined, args)
   model.beforeSave(beforeSave);
   model.afterSave(afterSave);
   model.afterFind(afterFind);
 }
 
+/**
+ * Exports
+ */
 const myModule = module.exports = setup;
-myModule.beforeSave = beforeSave;
-myModule.afterFind = afterFind;
+myModule.encrypt = beforeSave;
+myModule.decrypt = afterFind;
+myModule.genKeyring = genKeyring;
