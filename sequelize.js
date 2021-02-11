@@ -129,4 +129,6 @@ function setup(
   model.afterFind(afterFind);
 }
 
-module.exports = setup;
+const myModule = module.exports = setup;
+myModule.beforeSave = beforeSave;
+myModule.afterFind = afterFind;
