@@ -48,7 +48,7 @@ function beforeSave(record, options) {
 function afterFind(record) {
   if (!record) {
     return;
-  } else if (record instanceof Array) {
+  } else if (Array.isArray(record)) {
     return record.map(afterFind);
   }
 
